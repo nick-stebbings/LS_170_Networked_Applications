@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "LS175_Networked_Applications",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"workbench.colorCustomizations": {
+			"activityBar.background": "#51173D",
+			"titleBar.activeBackground": "#712055",
+			"titleBar.activeForeground": "#FEFCFD"
+		}
+	}
+}
