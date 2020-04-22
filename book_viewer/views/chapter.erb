@@ -1,0 +1,6 @@
+<h2 class="content-subhead"><%= @title%></h2>
+
+<% each_paragraph(@chapter, false) do |number, markup| %>
+<% markup.sub!(/(?<=<p)/, " id= para#{number}") # add id tag %> 
+<%= markup %> 
+<% end %>

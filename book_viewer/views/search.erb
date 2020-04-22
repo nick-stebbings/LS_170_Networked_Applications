@@ -1,0 +1,28 @@
+<h2 class="content-subhead">Search</h2>
+
+<form action="/search" method="get">
+  <input name="query" value="<%= params[:query] %>">
+  <button type="submit">Search</button>
+</form>
+<div class="pure-menu">
+<ul class="pure-menu-list">
+  <% unless @search_results.empty? then %>
+  <h2 class="content-subhead">Results for <em>"<%= params['query'] %>"</em></h2>
+
+  <% @search_results.each_with_index do |result, result_index| %>
+    <li class="pure-menu-item">
+      <a href="/chapters/<%= result[:chap_num] %>" class="pure-menu-link"><%= result[:chap_name] %></a>
+      <ul>
+        <li>
+          <a href="/chapters/<%= "#{result[:chap_num]}#para#{result[:para_num]}" %>"><%= result[:para_text] %></a>
+        </li>
+      </ul>
+    </li>
+  <% end 
+
+  else %>
+  <%= "No results" if params['query'] %>
+  <% end %>
+
+</ul>
+</div>

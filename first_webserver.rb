@@ -1,5 +1,5 @@
 require 'socket'
-
+# my parse method
 def parse_request(req_line)
   http_method, path_and_params, http = req_line.split(' ')
   path, params = (path_and_params.include?('?') ? path_and_params.split('?') : ['/',''])
@@ -11,7 +11,7 @@ def parse_request(req_line)
   [http_method, path, params]
 end
 
-server = TCPServer.new 3333
+server = TCPServer.new 4567
 
 loop do
   client = server.accept
