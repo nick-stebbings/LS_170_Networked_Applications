@@ -1,0 +1,18 @@
+<p>
+    <h2>Name:</h2>
+        <% name = params['splat'].first %>
+        <%= name %>
+        <% @users[name.to_sym].each do |key, value| %>
+    <h2><%= key.to_s.capitalize %>:</h2>
+        <%= value.is_a?(String) ? value : value.join(', ') %>
+        <% end %>
+</p>
+<hr />
+    <h4>Navigate to:</h4>
+<p>
+        <% @users.keys.reject { |other_name| other_name == name.to_sym }.each do |other_name| %>
+            <a href="/<%= other_name %>">
+                <%= other_name %>
+            </a>
+        <% end %>
+</p>

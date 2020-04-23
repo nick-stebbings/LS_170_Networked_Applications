@@ -70,7 +70,7 @@ end
 get "/search" do
   match_criteria = params['query']
   # match_criteria = %r{\b#{params['query']}\b}
-
+  
   run_search!(match_criteria) if (params['query'] && params['query'] != '')
   erb :search
 end
