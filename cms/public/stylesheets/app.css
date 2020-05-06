@@ -1,0 +1,10 @@
+section.flash {
+  background-color: lightyellow;
+}
+body {
+  font-family: sans-serif;
+  padding: 1em;
+}
+form.inline {
+  display: inline;
+}

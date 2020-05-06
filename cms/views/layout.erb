@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+
+<html>
+
+
+<head>
+    <title><%= @page_title %></title>
+    <link rel="stylesheet" href="/stylesheets/app.css">
+</head>
+
+<body>
+    <% if session[:error] %>
+        <section class="flash">
+            <%= session.delete(:error) %>
+        </section>
+    <% end %>
+    <% if session[:success] %>
+        <section class="flash">
+            <%= session.delete(:success) %>
+        </section>
+    <% end %>
+    <%= yield %>
+</body>
+
+</html>

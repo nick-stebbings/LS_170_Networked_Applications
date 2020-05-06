@@ -1,0 +1,17 @@
+<ul id="lists">
+  <% sort_lists(@lists) do |list, _| %>
+  <% if list_completed?(list[:id]) %>
+    <li class="complete">
+  <% else %>
+    <li>
+  <% end %>
+    <a href="/lists/<%= list[:id] %>">
+      <h2><%= list[:name] %></h2>
+    </a>
+    <p><%= incomplete_tasks_string(list[:id]) %></p>
+  </li>
+  <% end %>
+</ul>
+<% content_for :header_links do %>
+  <a href="/lists/new" class="add">New List</a>
+<% end %>
