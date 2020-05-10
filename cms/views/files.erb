@@ -1,12 +1,21 @@
 <section>
     <ul>
         <% @file_list.each do |file| %>
-        <li><a href="/<%= file %>">
-            <%= file %></a>
-            <a href="/<%= file %>/edit">Edit file</a>
-            <form class='inline' action="/<%= file %>/delete" method="post">
-            <button type="submit">Delete</button>
+        <li><a href="/<%= file %>"><%= file %></a>
+
+            <% if signed_in %>
+            <form action="/<%= file %>/edit" method="get">
+              <button type="submit">Edit File</button>
             </form>
+            <form class='inline' action="/<%= file %>/delete" method="post">
+              <button type="submit">Delete</button>
+            </form>
+            <form class='inline duplicate' action="/new" method="post">
+              <input type="hidden" name="original_filename" value="<%= file %>">
+              <input type="hidden" name="new_filename" id="new_filename">
+              <button type="submit" value="<%= file.sub('.', "(#{next_duplicate_number(file)}).") %>">Duplicate</button>
+            </form>     
+            <% end %>
         </li>
         <% end %>
     </ul>
@@ -18,9 +27,9 @@
       <button type="submit">Sign In</button>
     </form>
     <% else %>
-      <em><%= session[:user] %> is signed in.</em>
-      <form action="/users/signout" method="post">
+    <em><%= session[:user] %> is signed in.</em>
+    <form action="/users/signout" method="post">
       <button type="submit">Sign Out</button>
-      </form>
+    </form>
     <% end %>
 </section>

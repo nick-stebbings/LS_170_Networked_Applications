@@ -21,12 +21,6 @@ class AppTest < Minitest::Test
   def session
     last_request.env["rack.session"]
   end
-  
-  def create_document(name, content = "")
-    File.open(File.join(data_path, name), "w") do |file|
-      file.write(content)
-    end
-  end
 
   def test_index
     create_document('about.txt')
@@ -158,7 +152,7 @@ class AppTest < Minitest::Test
   end
   
   def test_signing_in_form_with_valid_credentials
-    post '/users/signin', "username" => USERS.keys.first, "password" => USERS.values.first
+    post '/users/signin', "username" => 'admin', "password" => 'secret'
     assert_equal 302, last_response.status
     assert_equal session[:success], 'Welcome!'
     assert_equal session[:user], 'admin'

@@ -15,6 +15,9 @@ end
 DATA_FOLDER = 'files'
 ROOT = File.expand_path('..', __FILE__)
 USERS = YAML.load_file(ROOT + '/users.yml')
+FILETYPES = { '.txt' => { header: 'text/plain'},
+              '.html' => { header: 'text/html'},
+              '.md' => { header: 'text/html'}}
 
 def data_path
   if ENV["RACK_ENV"] == "test"
@@ -38,6 +41,19 @@ helpers do
     renderer = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
     renderer.render(text)
   end
+
+  def next_duplicate_number(filename)
+    ext = File.extname(filename)
+    regexp = %r{#{File.basename(filename, ext)}\((?<num>\d)\)#{ext}}
+    candidates = @file_list.select { |f| f =~ regexp }
+    duplicate_numbers = candidates.map { |filename| filename.match(regexp)[1].to_i }
+    (duplicate_numbers.empty? ? 0 : duplicate_numbers.max) + 1
+  end
+
+  def file_contents(filename)
+    path = File.join(data_path, filename)
+    File.exist?(path) ? File.read(path) : nil
+  end
 end
 
 def signed_in
@@ -45,34 +61,47 @@ def signed_in
 end
 
 def check_user_credentials(username, password)
-   bcrypt_pw = BCrypt::Password.new(USERS[username])
-  ((USERS.keys.include? username) && (bcrypt_pw == password))
+  begin
+    bcrypt_pw = BCrypt::Password.new(USERS[username])
+    ((USERS.keys.include? username) && (bcrypt_pw == password))  
+  rescue => exception
+    false
+  end
 end
 
-def not_signed_in_message_and_redirect
+def redirect_with_error_unless_signed_in
   unless signed_in then (session[:error] = "You must be signed in to do that." ; redirect "/" ) end
 end
 
+def create_document(name, content = "")
+  File.open(File.join(data_path, name), "w") do |file|
+    file.write(content)
+  end
+end
+
 get "/new" do
-  not_signed_in_message_and_redirect
+  redirect_with_error_unless_signed_in
   erb :new
 end
 
 post "/new" do
-  not_signed_in_message_and_redirect
+  redirect_with_error_unless_signed_in
   filename = params[:new_filename]
-  unless filename == ''
-    path = File.join(data_path, filename)
-    File.open(path, "w") do |file|
-      file.write('')
-    end
-    session[:success] = "#{filename} was created."
-    redirect "/"
+  path = File.join(data_path, filename)
+  ext = File.extname(path)
+  duplicate = !!(copied_content = file_contents(params[:original_filename]))
+
+  if !FILETYPES[ext] 
+    session[:error] = (filename == '' ? "A name is required." : "You tried to create an unsupported filetype.")
+  elsif (@file_list.include? filename)
+    session[:error] = 'The file already exists.'
   else
-    session[:error] = "A name is required."
+    create_document(filename, (copied_content if duplicate))
+    session[:success] = "#{filename} was created."
+    redirect "/"        
+  end
     status 422
     erb :new
-  end
 end
 
 get "/" do
@@ -80,19 +109,21 @@ get "/" do
 end
 
 post "/:filename" do
-  not_signed_in_message_and_redirect
+  redirect_with_error_unless_signed_in
   path = File.join(data_path, params[:filename])
+
   File.open(path, 'w') do |f|
     f.puts params[:new_content].strip
   end
+
   session[:success] = "#{params[:filename]} was edited"
   redirect "/"
 end
 
 get "/:filename/edit" do |filename|
-  not_signed_in_message_and_redirect
-
+  redirect_with_error_unless_signed_in
   path = File.join(data_path, filename)
+
   @contents =   File.read(path)
   @filename = filename
   erb :edit
@@ -103,50 +134,47 @@ get "/:users/signin" do
   erb :signin
 end
 
-post "/users/signin" do
-  if signed_in
+post "/users/signin" do  
+  redirect "/" if signed_in
+
+  if check_user_credentials(params[:username], params[:password])
+    session[:success] = 'Welcome!'
+    session[:user] = params[:username]
     redirect "/"
   else
-    if check_user_credentials(params[:username], params[:password])
-      session[:success] = 'Welcome!'
-      session[:user] = params[:username]
-      redirect "/"
-    else
-      status 422
-      session[:error] = 'Invalid Credentials.'
-      erb :signin
-    end
+    status 422
+    session[:error] = 'Invalid Credentials.'
+    erb :signin
   end
 end
 
 post "/users/signout" do
-  if signed_in
-    session[:user] = nil
-  end
+  session[:user] = nil if signed_in
   session[:success] = 'You are signed out.'
+
   redirect "/"
 end
 
 post "/:filename/delete" do |filename|
-  not_signed_in_message_and_redirect
+  redirect_with_error_unless_signed_in
   path = File.join(data_path, filename)
+
   File.delete(path) if File.exist? path
   session[:success] = "#{filename} was deleted"
+
   redirect "/"
 end
 
-get "/*.*" do
-  base, ext = params[:splat]
-  filename = params[:splat].join('.')
+get "/:filename" do |filename|
   path = File.join(data_path, filename)
   if @file_list.include?(filename)
     @contents = File.read(path)
+    ext = File.extname(path)
+    headers['Content-Type'] = FILETYPES[ext][:header]
     case ext
-    when 'txt'
-      headers['Content-Type'] = 'text/plain'
+    when '.txt'
       @contents
-    when 'md'
-      headers['Content-Type'] = 'text/html'
+    when '.md'
       erb render_markdown(@contents)
     end
   else
