@@ -42,21 +42,22 @@ helpers do
     renderer.render(text)
   end
 
-  def next_duplicate_number(filename)
-    ext = File.extname(filename)
-    regexp = %r{#{File.basename(filename, ext)}\((?<num>\d)\)#{ext}}
+  def next_file_number(filename, ext, type = :duplicate)
+    clean_filename = filename.match(/(.*?)(?=[\(.])/)[1]
+    regexp = %r{#{File.basename(clean_filename, ext)}\(#{"v_" if type == :legacy}(?<num>\d)\)#{ext}}x
     candidates = @file_list.select { |f| f =~ regexp }
     duplicate_numbers = candidates.map { |filename| filename.match(regexp)[1].to_i }
     (duplicate_numbers.empty? ? 0 : duplicate_numbers.max) + 1
   end
 
   def file_contents(filename)
-    path = File.join(data_path, filename)
+    return filename if filename.nil?
+    path = File.join(data_path, filename) if FILETYPES.key?(File.extname(filename))
     File.exist?(path) ? File.read(path) : nil
   end
 end
 
-def signed_in
+def signed_in?
   session.key?(:user)
 end
 
@@ -70,13 +71,18 @@ def check_user_credentials(username, password)
 end
 
 def redirect_with_error_unless_signed_in
-  unless signed_in then (session[:error] = "You must be signed in to do that." ; redirect "/" ) end
+  unless signed_in? then (session[:error] = "You must be signed in to do that." ; redirect "/" ) end
 end
 
 def create_document(name, content = "")
   File.open(File.join(data_path, name), "w") do |file|
     file.write(content)
   end
+end
+
+def changes_made?(path, new_contents)
+  return nil unless File.exist? path
+  File.read(path).strip != new_contents.strip
 end
 
 get "/new" do
@@ -87,8 +93,8 @@ end
 post "/new" do
   redirect_with_error_unless_signed_in
   filename = params[:new_filename]
-  path = File.join(data_path, filename)
-  ext = File.extname(path)
+  ext = File.extname(filename)
+  path = File.join(data_path, filename) if FILETYPES.key?(ext)
   duplicate = !!(copied_content = file_contents(params[:original_filename]))
 
   if !FILETYPES[ext] 
@@ -108,15 +114,23 @@ get "/" do
   erb :files
 end
 
-post "/:filename" do
+post "/:filename" do |filename|
   redirect_with_error_unless_signed_in
-  path = File.join(data_path, params[:filename])
+  path = File.join(data_path, filename)
+  changed = changes_made?(path, params[:new_content].strip)
+  if changed
+    ext = File.extname(filename)
+    v_num = next_file_number(filename, ext, :legacy)
+    legacy_filename = "#{File.basename(filename, ext).sub(/(?:[\(].*[\)])?(?=$)/, "(v_#{v_num})") + ext}"
+    copied_content = file_contents(filename)
+    create_document(legacy_filename, copied_content)
+  end
 
   File.open(path, 'w') do |f|
     f.puts params[:new_content].strip
   end
 
-  session[:success] = "#{params[:filename]} was edited"
+  session[:success] = "#{filename} was edited" << (changed ? " and the old version was saved." : "")
   redirect "/"
 end
 
@@ -130,12 +144,12 @@ get "/:filename/edit" do |filename|
 end
 
 get "/:users/signin" do
-  redirect "/" if signed_in
+  redirect "/" if signed_in?
   erb :signin
 end
 
 post "/users/signin" do  
-  redirect "/" if signed_in
+  redirect "/" if signed_in?
 
   if check_user_credentials(params[:username], params[:password])
     session[:success] = 'Welcome!'
@@ -149,7 +163,7 @@ post "/users/signin" do
 end
 
 post "/users/signout" do
-  session[:user] = nil if signed_in
+  session[:user] = nil if signed_in?
   session[:success] = 'You are signed out.'
 
   redirect "/"

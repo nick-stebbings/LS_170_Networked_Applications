@@ -3,7 +3,7 @@
         <% @file_list.each do |file| %>
         <li><a href="/<%= file %>"><%= file %></a>
 
-            <% if signed_in %>
+            <% if signed_in? %>
             <form action="/<%= file %>/edit" method="get">
               <button type="submit">Edit File</button>
             </form>
@@ -13,7 +13,7 @@
             <form class='inline duplicate' action="/new" method="post">
               <input type="hidden" name="original_filename" value="<%= file %>">
               <input type="hidden" name="new_filename" id="new_filename">
-              <button type="submit" value="<%= file.sub('.', "(#{next_duplicate_number(file)}).") %>">Duplicate</button>
+              <button type="submit" value="<%= file.sub('.', "(#{next_file_number(file, File.extname(file), :duplicate)}).") %>">Duplicate</button>
             </form>     
             <% end %>
         </li>
@@ -21,7 +21,7 @@
     </ul>
     <a href="/new">New Document</a>
     <br />
-    <% unless signed_in %>
+    <% unless signed_in? %>
 
     <form action="/users/signin" method="get">
       <button type="submit">Sign In</button>
